@@ -1,8 +1,7 @@
 package com.example.warehouse.controller;
 
-import com.example.warehouse.model.Token;
-import com.example.warehouse.model.User;
-import com.example.warehouse.model.UserPrincipal;
+import com.example.warehouse.model.*;
+import com.example.warehouse.model.response.UserResp;
 import com.example.warehouse.service.UserService;
 import com.example.warehouse.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,12 +35,21 @@ public  class UserController {
 
 
     @RequestMapping(method = RequestMethod.GET)
-    public List<User> findAllUser(){
+    public List<UserResp> findAllUser(){
         List<User> userList = userService.findAllUser();
         if(userList.isEmpty()){
-            //return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+//            return new ResponseEntity<User>(HttpStatus.NO_CONTENT);
         }
-        return  userList;
+        List<UserResp> list = new ArrayList<>();
+        try{
+            userList.forEach(item->
+                    list.add(new UserResp(item.getId(), item.getName(), item.getPhone(),item.getEmail(),item.getAddress(),item.getImage(),item.getUserHistories(),item.getUserWarehouses()))
+            );
+        }catch(Exception e){
+            System.out.println(e.getMessage());
+        }
+
+        return  list;
     }
 
     @RequestMapping(value = "/{id}",method = RequestMethod.GET,produces = MediaType.APPLICATION_JSON_VALUE)

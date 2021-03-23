@@ -3,12 +3,16 @@ package com.example.warehouse.controller;
 import com.example.warehouse.model.*;
 import com.example.warehouse.model.response.UserResp;
 import com.example.warehouse.service.UserService;
+import com.example.warehouse.service.elasticsearch.UserSearchService;
 import com.example.warehouse.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -24,12 +28,16 @@ import java.util.Optional;
 public  class UserController {
 
     private UserService userService;
+    private UserSearchService userSearchService;
     private JwtUtil jwtUtil;
+    private JavaMailSender javaMailSender;
 
     @Autowired
-    public UserController(UserService userService,JwtUtil jwtUtil){
+    public UserController(UserService userService,JwtUtil jwtUtil,UserSearchService userSearchService,JavaMailSender javaMailSender){
         this.userService = userService;
         this.jwtUtil = jwtUtil;
+        this.userSearchService = userSearchService;
+        this.javaMailSender = javaMailSender;
     }
 
 
@@ -112,5 +120,52 @@ public  class UserController {
         String email = ((UserPrincipal)principal).getEmail();
         return ResponseEntity.ok(email);
     }
+
+    @PostMapping("/test")
+    public ResponseEntity testIndex(@RequestBody com.example.warehouse.model.elastic.User user){
+        try{
+            userSearchService.createUserIndex(user);
+            return ResponseEntity.ok(user);
+        }catch(Exception e){
+            return ResponseEntity.ok(user);
+        }
+
+    }
+    @RequestMapping(value = "/search/brand/{brand}",method = RequestMethod.GET,produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getListByBrand(@PathVariable("brand")String brand){
+        SearchHits<com.example.warehouse.model.elastic.User> userSearchHits = userSearchService.findByBrand(brand);
+
+        if(userSearchHits.isEmpty()){
+            return new ResponseEntity<>(userSearchHits.get(),HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<>(userSearchHits.get(),HttpStatus.OK);
+    }
+    @RequestMapping(value = "/search/name/{name}",method = RequestMethod.GET,produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> getListByName(@PathVariable("name")String name){
+        SearchHits<com.example.warehouse.model.elastic.User> userSearchHits = userSearchService.findByName(name);
+
+        if(userSearchHits.isEmpty()){
+            return new ResponseEntity<>(userSearchHits.get(),HttpStatus.NO_CONTENT);
+        }
+        return new ResponseEntity<>(userSearchHits.get(),HttpStatus.OK);
+    }
+
+    @RequestMapping("/sendEmail")
+    public String sendSimpleEmail() {
+
+        // Create a Simple MailMessage.
+        SimpleMailMessage message = new SimpleMailMessage();
+
+        message.setTo("phuochungdn1999@gmail.com");
+        message.setSubject("Test Simple Email");
+        message.setText("Hello, Im testing Simple Email");
+
+        // Send Message!
+        this.javaMailSender.send(message);
+
+        return "Email Sent!";
+    }
+
+
 
 }
